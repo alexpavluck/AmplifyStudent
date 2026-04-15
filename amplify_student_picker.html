@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AMPLIFY — Random Student Picker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-page: #f5f4f0;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f1f0ec;
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6b66;
+    --text-tertiary: #a0a09a;
+    --border-light: rgba(0,0,0,0.12);
+    --border-mid: rgba(0,0,0,0.22);
+    --border-strong: rgba(0,0,0,0.35);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-page: #1a1a18;
+      --bg-primary: #242422;
+      --bg-secondary: #2e2e2c;
+      --text-primary: #f0efe9;
+      --text-secondary: #a0a09a;
+      --text-tertiary: #666662;
+      --border-light: rgba(255,255,255,0.1);
+      --border-mid: rgba(255,255,255,0.2);
+      --border-strong: rgba(255,255,255,0.32);
+    }
+    .lang-en { background: #0C447C !important; color: #B5D4F4 !important; }
+    .lang-fr { background: #3C3489 !important; color: #CECBF6 !important; }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 2rem 1rem 4rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  header h1 { font-size: 18px; font-weight: 500; color: var(--text-primary); letter-spacing: 0.04em; text-transform: uppercase; font-size: 13px; margin-bottom: 6px; color: var(--text-secondary); }
+  header p  { font-size: 22px; font-weight: 500; color: var(--text-primary); }
+
+  .picker-wrap {
+    width: 100%;
+    max-width: 520px;
+  }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+  .filter-btn {
+    flex: 1; padding: 9px 0;
+    border: 0.5px solid var(--border-mid);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 14px; cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .filter-btn:hover { background: var(--bg-secondary); }
+  .filter-btn.active {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+    font-weight: 500;
+  }
+
+  .pick-btn {
+    width: 100%; padding: 14px;
+    border: 0.5px solid var(--border-mid);
+    border-radius: var(--radius-lg);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 16px; font-weight: 500;
+    cursor: pointer; margin-bottom: 1.5rem;
+    transition: background 0.15s, transform 0.1s;
+    position: relative; overflow: hidden;
+    font-family: inherit;
+  }
+  .pick-btn:hover:not(:disabled) { background: var(--bg-secondary); }
+  .pick-btn:active:not(:disabled) { transform: scale(0.98); }
+  .pick-btn:disabled { opacity: 0.6; cursor: default; }
+
+  .result-card {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border-light);
+    padding: 1.5rem;
+    text-align: center;
+    min-height: 148px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    margin-bottom: 1.5rem;
+    position: relative; overflow: hidden;
+  }
+  .result-inner { display: flex; flex-direction: column; align-items: center; }
+  .result-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 500;
+    margin-bottom: 12px;
+  }
+  .result-name { font-size: 20px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+  .result-meta { font-size: 13px; color: var(--text-secondary); }
+  .lang-badge {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: 12px; font-weight: 500; margin-right: 6px;
+  }
+  .lang-en { background: #E6F1FB; color: #0C447C; }
+  .lang-fr { background: #EEEDFE; color: #3C3489; }
+  .placeholder-text { color: var(--text-tertiary); font-size: 15px; }
+  .shuffle-name { font-size: 18px; font-weight: 500; color: var(--text-secondary); animation: shuffleFade 0.18s ease both; }
+
+  .history-section { margin-top: 0.5rem; }
+  .history-label {
+    font-size: 12px; color: var(--text-secondary);
+    margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .history-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 12px; padding: 4px 10px; border-radius: 20px;
+    background: var(--bg-secondary);
+    border: 0.5px solid var(--border-light);
+    color: var(--text-secondary);
+    transition: all 0.3s;
+  }
+  .chip.called { color: var(--text-tertiary); text-decoration: line-through; opacity: 0.5; }
+  .chip.just-called { animation: chipPop 0.4s ease forwards; }
+  .reset-btn {
+    font-size: 12px; background: none; border: none;
+    cursor: pointer; color: var(--text-secondary);
+    padding: 0; text-decoration: underline;
+    font-family: inherit;
+  }
+
+  @keyframes chipPop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes avatarPop {
+    0%   { transform: scale(0.3); opacity: 0; }
+    60%  { transform: scale(1.15); opacity: 1; }
+    80%  { transform: scale(0.92); }
+    100% { transform: scale(1); }
+  }
+  @keyframes ripple {
+    from { transform: scale(0); opacity: 0.3; }
+    to   { transform: scale(4); opacity: 0; }
+  }
+  @keyframes shuffleFade {
+    0%   { opacity: 0; transform: translateY(-6px); }
+    20%  { opacity: 1; transform: translateY(0); }
+    80%  { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(6px); }
+  }
+  @keyframes borderPulse {
+    0%   { border-color: var(--border-light); }
+    50%  { border-color: var(--border-strong); }
+    100% { border-color: var(--border-light); }
+  }
+  .reveal-avatar { animation: avatarPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+  .reveal-name   { animation: slideUp 0.35s 0.12s ease both; }
+  .reveal-meta   { animation: slideUp 0.35s 0.22s ease both; }
+  .card-glow     { animation: borderPulse 0.6s ease; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AMPLIFY 2026</h1>
+  <p>Random student picker</p>
+</header>
+
+<div class="picker-wrap">
+  <div class="filter-row">
+    <button class="filter-btn active" onclick="setFilter('all', this)">All students</button>
+    <button class="filter-btn" onclick="setFilter('English', this)">English only</button>
+    <button class="filter-btn" onclick="setFilter('French', this)">French only</button>
+  </div>
+
+  <button class="pick-btn" id="pick-btn" onclick="pickStudent()">Pick a random student</button>
+
+  <div class="result-card" id="result-card">
+    <p class="placeholder-text">No one selected yet</p>
+  </div>
+
+  <div class="history-section">
+    <div class="history-label">
+      <span>Called so far <span id="count-label"></span></span>
+      <button class="reset-btn" onclick="resetHistory()">Reset</button>
+    </div>
+    <div class="history-chips" id="history-chips"></div>
+  </div>
+</div>
+
+<script>
+const students = [
+  { name: "Gabe Anicet",               country: "CIV",          lang: "French"  },
+  { name: "Hahyat N'Goran",            country: "CIV",          lang: "French"  },
+  { name: "Fitsum Abraham Adalo",       country: "Ethiopia",     lang: "English" },
+  { name: "Samuel Lukanga",             country: "DRC",          lang: "French"  },
+  { name: "Jones Anim",                 country: "Ghana",        lang: "English" },
+  { name: "Papy Bope Kwete",            country: "DRC",          lang: "French"  },
+  { name: "Michael Mensah Dzokoto",     country: "Ghana",        lang: "English" },
+  { name: "Akoj Deng",                  country: "South Sudan",  lang: "English" },
+  { name: "Manyang Amos",               country: "South Sudan",  lang: "English" },
+  { name: "Gbandi Fare-Tassa Tchedre",  country: "Togo",         lang: "French"  },
+  { name: "Rachel Aniniwaa Addo",       country: "Ghana",        lang: "English" },
+  { name: "Jean Tahaka Ahourma",        country: "Togo",         lang: "French"  },
+  { name: "Gedefaw Liben",              country: "Ethiopia",     lang: "English" },
+  { name: "Dieu Merci Dwe Mupana",      country: "DRC",          lang: "French"  },
+  { name: "Tesfahun Bishaw",            country: "Ethiopia",     lang: "English" },
+  { name: "Mamadou Serme",              country: "Burkina Faso", lang: "French"  }
+];
+
+let filter = 'all';
+let called = new Set();
+let shuffleTimer = null;
+
+function initials(name) {
+  return name.split(' ').slice(0,2).map(p => p[0]).join('').toUpperCase();
+}
+
+const avatarColors = [
+  { bg:'#E6F1FB', fg:'#0C447C' },
+  { bg:'#EEEDFE', fg:'#3C3489' },
+  { bg:'#E1F5EE', fg:'#085041' },
+  { bg:'#FAEEDA', fg:'#633806' },
+  { bg:'#FAECE7', fg:'#712B13' },
+  { bg:'#EAF3DE', fg:'#27500A' }
+];
+
+function getColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h += name.charCodeAt(i);
+  return avatarColors[h % avatarColors.length];
+}
+
+function setFilter(f, btn) {
+  filter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateHistory();
+}
+
+function pickStudent() {
+  const btn = document.getElementById('pick-btn');
+  const card = document.getElementById('result-card');
+  btn.disabled = true;
+  btn.textContent = 'Picking...';
+
+  const pool = students.filter(s => filter === 'all' || s.lang === filter);
+  const uncalled = pool.filter(s => !called.has(s.name));
+  const source = uncalled.length > 0 ? uncalled : pool;
+  if (source.length === 0) { btn.disabled = false; btn.textContent = 'Pick a random student'; return; }
+
+  const chosen = source[Math.floor(Math.random() * source.length)];
+  let shuffleCount = 0;
+  const totalShuffles = 14;
+
+  function showShuffleFrame() {
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    card.innerHTML = `<div class="result-inner"><div class="shuffle-name">${pick.name}</div></div>`;
+  }
+
+  card.classList.remove('card-glow');
+  showShuffleFrame();
+
+  shuffleTimer = setInterval(() => {
+    shuffleCount++;
+    if (shuffleCount >= totalShuffles) {
+      clearInterval(shuffleTimer);
+      revealStudent(chosen, card, btn);
+      return;
+    }
+    showShuffleFrame();
+  }, 100 + shuffleCount * 10);
+}
+
+function revealStudent(student, card, btn) {
+  called.add(student.name);
+  const col = getColor(student.name);
+  card.classList.add('card-glow');
+  card.innerHTML = `
+    <div class="result-inner">
+      <div class="result-avatar reveal-avatar" style="background:${col.bg};color:${col.fg}">${initials(student.name)}</div>
+      <div class="result-name reveal-name">${student.name}</div>
+      <div class="result-meta reveal-meta">
+        <span class="lang-badge ${student.lang === 'English' ? 'lang-en' : 'lang-fr'}">${student.lang}</span>
+        ${student.country}
+      </div>
+    </div>`;
+  btn.textContent = 'Pick another student';
+  btn.disabled = false;
+  updateHistory(student.name);
+}
+
+function updateHistory(justCalled) {
+  const pool = students.filter(s => filter === 'all' || s.lang === filter);
+  const calledInPool = pool.filter(s => called.has(s.name)).length;
+  document.getElementById('count-label').textContent = `(${calledInPool} / ${pool.length})`;
+  document.getElementById('history-chips').innerHTML = pool.map(s =>
+    `<span class="chip ${called.has(s.name) ? 'called' : ''} ${s.name === justCalled ? 'just-called' : ''}">${s.name.split(' ')[0]}</span>`
+  ).join('');
+}
+
+function resetHistory() {
+  called.clear();
+  if (shuffleTimer) clearInterval(shuffleTimer);
+  const btn = document.getElementById('pick-btn');
+  btn.disabled = false;
+  btn.textContent = 'Pick a random student';
+  document.getElementById('result-card').innerHTML = '<p class="placeholder-text">No one selected yet</p>';
+  updateHistory();
+}
+
+updateHistory();
+</script>
+</body>
+</html>
